@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - name: hi
+      - name: Check APPID & APPSECRET for dev
         run:  |
           echo "$APPID"
           echo "$APPSECRET"
