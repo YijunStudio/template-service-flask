@@ -1,9 +1,11 @@
 import decimal
 import pymysql
+import psycopg2
 import threading
 import json
 import datetime
 from pymysql.err import MySQLError
+from psycopg2.errors import Error
 
 from flask import request, current_app
 from werkzeug.local import LocalProxy
