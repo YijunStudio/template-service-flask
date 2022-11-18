@@ -20,6 +20,146 @@ from dbutils.pooled_db import PooledDB, SharedDBConnection
 
 # print(os.environ.get('DB_USER'))
 
+class DBInstance:
+    def __init__(self, database_type):
+        try:
+            self.type = database_type;
+            if database_type == 'mysql':
+                self.pool = PooledDB(
+                    creator=pymysql,
+                    maxconnections=None,
+                    mincached=2,
+                    maxcached=8,
+                    blocking=True,
+                    maxusage=None,
+                    setsession=[],
+                    ping=1,
+                    host=env.get('DB_HOST'),
+                    port=int(env.get('DB_PORT')),
+                    user=env.get('DB_USER'),
+                    password=env.get('DB_PASS'),
+                    database=env.get('DB_NAME'),
+                    charset="utf8",
+                )
+            elif database_type == 'postgres':
+                self.pool = PooledDB(
+                    creator=psycopg2,
+                    maxconnections=None,
+                    mincached=2,
+                    maxcached=8,
+                    blocking=True,
+                    maxusage=None,
+                    setsession=[],
+                    ping=1,
+                    host=env.get('DB_HOST'),
+                    port=int(env.get('DB_PORT')),
+                    user=env.get('DB_USER'),
+                    password=env.get('DB_PASS'),
+                    database=env.get('DB_NAME'),
+                    charset="utf8",
+                )
+            else:
+                raise Exception
+            self.connection = self.pool.connection()
+        except Exception as e:
+            logger.error('Open connection error: %s'%e)
+            raise
+
+    def mutate(self, sqlphase):
+        db = self.connection
+        sql = None
+        try:
+            logger.info("Open db connection: %s" % (sqlphase))
+            # 使用cursor()方法获取操作游标
+            cursor = self.cursor()
+
+            # SQL 更新语句
+            sql = sqlphase
+        
+            # 执行SQL语句
+            cursor.execute(sql)
+            db.commit()
+            return (True, [-1, sql])
+            return "Success: %s" % sql
+
+        except MySQLError as err:
+            # 发生错误时回滚
+            if db:
+                db.rollback()
+            if sql:
+                logger.error("SQL: %s [%s]" % (sql, err.args[0]))
+                return (False, [err.args[0], sql])
+            logger.error("%s" % (str(err)))
+            return (False, [err.args[0]])
+            return "Error: %s" % sql
+        except Error as err:
+            # 发生错误时回滚
+            if db:
+                db.rollback()
+            if sql:
+                logger.error("SQL: %s [%s]" % (sql, err.args[0]))
+                return (False, [err.args[0], sql])
+            logger.error("%s" % (str(err)))
+            return (False, [err.args[0]])
+            return "Error: %s" % sql
+        finally:
+            if db:
+                # 关闭数据库连接
+                logger.info("Close db connection")
+                db.close()
+
+
+    def query(self, cols, view, conditions=[], orderby=[]):
+        db = self.connection
+        sql = None
+        try:
+            # 打开数据库连接
+            logger.info("Open db connection: %s" % (view))
+            # 使用cursor()方法获取操作游标
+            cursor = self.cursor()
+
+            # SQL 查询语句
+            sql = "SELECT %s FROM %s" % (', '.join(cols), view)
+            if len(conditions) != 0:
+                sql = sql + " WHERE %s" % (' AND '.join(conditions))
+            if len(orderby) != 0:
+                sql = sql + " ORDER BY %s" % (' , '.join(orderby))
+            # print(sql)
+            sql += ";"
+        
+            # 执行SQL语句
+            cursor.execute(sql)
+            # 获取所有记录列表
+            res = cursor.fetchall()
+            arr = []
+            if res:
+                for itemIndex in range(len(res)):
+                    item = {}
+                    for index in range(len(cols)):
+                        item[cols[index]] = res[itemIndex][index]
+                    arr.append(item)
+            return (True, arr)
+        except MySQLError as err:
+            if sql:
+                logger.error("SQL: %s [%s]" % (sql, err.args[0]))
+                return (False, [err.args[0], sql])
+            logger.error("%s" % (str(err)))
+            return (False, [err.args[0]])
+            return "Error: unable to fetch data"
+        except Error as err:
+            if sql:
+                logger.error("SQL: %s [%s]" % (sql, err.args[0]))
+                return (False, [err.args[0], sql])
+            logger.error("%s" % (str(err)))
+            return (False, [err.args[0]])
+            return "Error: unable to fetch data"
+        finally:
+            if db:
+                # 关闭数据库连接
+                logger.info("Close db connection")
+                db.close()
+            
+
 POOL = PooledDB(
     creator=pymysql,
     maxconnections=None,
