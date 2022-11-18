@@ -2,17 +2,24 @@ name: YourServiceName Service CI - Production
 
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ production ]
 
 env:
   deploy-port: 5051
   docker-image-name: ${{ github.event.repository.name }}
+  APPID: ${{ secrets.APPID }}
+  APPSECRET: ${{ secrets.APPSECRET }}
 
 jobs:
   docker:
     name: Docker Build, Push and Deploy
     runs-on: ubuntu-latest
+    environment: dev
     steps:
+      - name: Check APPID & APPSECRET for dev
+        run:  |
+          echo "$APPID"
+          echo "$APPSECRET"
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
