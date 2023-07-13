@@ -1,2 +1,2 @@
 # template-service-flask
-Template for service using Python 3.7 Flask
+Template for service using Python 3.10 Flask
